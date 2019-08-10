@@ -148,16 +148,16 @@ TEST_ARGS ?=
 # ============================
 # Compilation Tools
 # ============================
-DEVICE_CC        = $(SJARMGCC)/bin/arm-none-eabi-gcc
-DEVICE_CPPC      = $(SJARMGCC)/bin/arm-none-eabi-g++
-DEVICE_OBJDUMP   = $(SJARMGCC)/bin/arm-none-eabi-objdump
-DEVICE_SIZEC     = $(SJARMGCC)/bin/arm-none-eabi-size
-DEVICE_OBJCOPY   = $(SJARMGCC)/bin/arm-none-eabi-objcopy
-DEVICE_NM        = $(SJARMGCC)/bin/arm-none-eabi-nm
-DEVICE_AR        = $(SJARMGCC)/bin/arm-none-eabi-ar
-DEVICE_RANLIB    = $(SJARMGCC)/bin/arm-none-eabi-ranlib
-DEVICE_ADDR2LINE = $(SJARMGCC)/bin/arm-none-eabi-addr2line
-DEVICE_GDB       = $(SJARMGCC)/bin/arm-none-eabi-gdb-py
+DEVICE_CC        ?= $(SJARMGCC)/bin/arm-none-eabi-gcc
+DEVICE_CPPC      ?= $(SJARMGCC)/bin/arm-none-eabi-g++
+DEVICE_OBJDUMP   ?= $(SJARMGCC)/bin/arm-none-eabi-objdump
+DEVICE_SIZEC     ?= $(SJARMGCC)/bin/arm-none-eabi-size
+DEVICE_OBJCOPY   ?= $(SJARMGCC)/bin/arm-none-eabi-objcopy
+DEVICE_NM        ?= $(SJARMGCC)/bin/arm-none-eabi-nm
+DEVICE_AR        ?= $(SJARMGCC)/bin/arm-none-eabi-ar
+DEVICE_RANLIB    ?= $(SJARMGCC)/bin/arm-none-eabi-ranlib
+DEVICE_ADDR2LINE ?= $(SJARMGCC)/bin/arm-none-eabi-addr2line
+DEVICE_GDB       ?= $(SJARMGCC)/bin/arm-none-eabi-gdb-py
 # Cause compiler warnings to become errors.
 # Used in presubmit checks to make sure that the codebase does not include
 # warnings
@@ -334,9 +334,12 @@ COMMON_FLAGS += $(OPTIMIZE) $(DEBUG_FLAG) $(WARNINGS) $(DEFINES) \
                 $(DISABLED_WARNINGS) -fdiagnostics-color
 # Add the last touch for object files
 CFLAGS_COMMON = $(COMMON_FLAGS) $(INCLUDES) $(SYSTEM_INCLUDES) -MMD -MP -c
-LINKFLAGS = $(COMMON_FLAGS)  -Wl,--gc-sections -Wl,-Map,"$(MAP)" \
+
+ifndef LINKFLAGS
+LINKFLAGS = $(COMMON_FLAGS) -Wl,--gc-sections -Wl,-Map,"$(MAP)" \
             -specs=nano.specs \
             -T $(LIBRARY_DIR)/L0_Platform/$(PLATFORM)/linker.ld
+endif
 
 # Enable a whole different set of exceptions, checks, coverage tools and more
 # with the test target

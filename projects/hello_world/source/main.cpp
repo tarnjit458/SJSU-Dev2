@@ -1,11 +1,19 @@
+#include <chrono>
 #include <cstdint>
 #include <iterator>
 
 #include "utility/log.hpp"
 #include "utility/time.hpp"
 
+std::chrono::microseconds LinuxUptime()
+{
+  return std::chrono::duration_cast<std::chrono::microseconds>(
+      std::chrono::system_clock::now().time_since_epoch());
+}
+
 int main()
 {
+  sjsu::SetUptimeFunction(LinuxUptime);
   LOG_INFO("Staring Hello World Application");
   while (true)
   {

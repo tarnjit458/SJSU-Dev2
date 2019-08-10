@@ -1,7 +1,7 @@
 INCLUDES +=
 SYSTEM_INCLUDES +=
 
-SOURCES += $(LIBRARY_DIR)/L3_Application/task_scheduler.cpp
+# SOURCES += $(LIBRARY_DIR)/L3_Application/task_scheduler.cpp
 
 TESTS += $(LIBRARY_DIR)/L3_Application/task_scheduler.cpp
 TESTS += $(LIBRARY_DIR)/L3_Application/test/task_scheduler_test.cpp
