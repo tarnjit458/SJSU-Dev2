@@ -64,6 +64,10 @@ variable. For example, the possible set of VALUES for VARIABLE
 - **test-debug**: Debug test executable in GDB (currently uses system's GDB not
   llvm)
 
+### Analysis Commands
+
+- **report-card**: will dump the number of
+
 ### Collaberation Commands
 
 - **lint**: Checks that the syntax and code style match the

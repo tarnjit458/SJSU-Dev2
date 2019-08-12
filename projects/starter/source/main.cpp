@@ -9,5 +9,14 @@
 // added in the future.
 int main()
 {
+  // try
+  // {
+  //   throw 1;
+  // }
+  // catch(int e)
+  // {
+  //   // std::cerr << e.what() << '\n';
+  // }
+
   return 0;
 }

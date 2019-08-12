@@ -201,7 +201,7 @@ endif
 # "make application"'s build directory becomes "build/application"
 ifeq ($(MAKECMDGOALS), $(filter $(MAKECMDGOALS), application flash jtag-flash \
       platform-flash platform-jtag-flash stacktrace-application \
-			multi-debug debug))
+			multi-debug debug report-card))
 BUILD_SUBDIRECTORY_NAME = application
 else
 BUILD_SUBDIRECTORY_NAME = $(MAKECMDGOALS)
@@ -503,6 +503,11 @@ telemetry:
 format-code:
 	@$(SJCLANG)/bin/git-clang-format --binary="$(SJCLANG)/bin/clang-format" \
 	  --force
+# ====================================================================
+# Report Card
+# ====================================================================
+report-card:
+	@$(DEVICE_NM) --size-sort --demangle --line-numbers --radix="d" $(EXECUTABLE)
 # ====================================================================
 # Build Test Executable, Run test and generate code coverage
 # ====================================================================
