@@ -38,7 +38,7 @@ class LCD_I2C : public lcd
           CursorPosition_t position,
           I2c & i2c,
           uint8_t address)
-      : lcd(BusMode::kFourBitMode, display_mode, font_style, position),
+      : lcd(position),
         i2c_(i2c),
         addr_(address),
         kDisplayMode(display_mode),
@@ -50,29 +50,29 @@ class LCD_I2C : public lcd
   {
     Status init_status = i2c_.Initialize();
     i2c_.Initialize();
-    _displaysetting =
-        (util::Value(kBusMode) | util::Value(kDisplayMode) | util::Value(kFontStyle));
+    _displaysetting = (util::Value(kBusMode) | util::Value(kDisplayMode) |
+                       util::Value(kFontStyle));
 
     // Initialization sequence according to the data manual
     Delay(1s);
     // Function set 8 bit mode
-    WriteByte(RegisterOperation::kCommand, (0x03 << 4));
+    Write(RegisterOperation::kCommand, (0x03 << 4));
     Delay(5ms);
     // Function set 8 bit mode
-    WriteByte(RegisterOperation::kCommand, (0x03 << 4));
+    Write(RegisterOperation::kCommand, (0x03 << 4));
     Delay(5ms);
     // Function set 8 bit mode
-    WriteByte(RegisterOperation::kCommand, (0x03 << 4));
+    Write(RegisterOperation::kCommand, (0x03 << 4));
     Delay(5ms);
     // Function set: set interface to 4 bits
-    WriteByte(RegisterOperation::kCommand, (0x02 << 4));
+    Write(RegisterOperation::kCommand, (0x02 << 4));
     Delay(5ms);
 
     InitializeScreen();
     return init_status;
   }
-
-  void WriteByte(RegisterOperation operation, uint8_t byte) override
+  // Handles the write operation
+  void Write(RegisterOperation operation, uint8_t byte)
   {
     ControlPins_t pin;
     pin.byte = byte;
@@ -95,6 +95,18 @@ class LCD_I2C : public lcd
     Delay(1ms);
     i2c_.Write(addr_, &byte, sizeof(byte));
     PulseEnable(byte);
+  }
+  // Handles the write operation for the 4-bit operation
+  void WriteByte(RegisterOperation operation, uint8_t byte) override
+  {
+    uint8_t highnib, lownib = 0;
+
+    highnib = (byte & 0xf0);
+    lownib  = uint8_t((byte << 4) & 0xf0);
+    // printf("Command: %i\n", highnib);
+    Write(operation, highnib);
+    // printf("Command: %i\n", lownib);
+    Write(operation, lownib);
   }
 
   // Pulses the enable high then low for writing
