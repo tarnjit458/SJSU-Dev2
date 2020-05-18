@@ -1,11 +1,16 @@
+// LCD Interface adapted from David Huang's Parallel LCD driver
+
 #pragma once
 
+#include <stdio.h>
 #include <cstdint>
 #include <cstring>
+
 #include "utility/enum.hpp"
 #include "utility/units.hpp"
 #include "utility/time.hpp"
 #include "utility/status.hpp"
+#include "utility/log.hpp"
 
 namespace sjsu
 {
@@ -92,28 +97,21 @@ class lcd
   static constexpr CursorPosition_t kDefaultCursorPosition =
       CursorPosition_t{ 0, 0 };
 
-  // Constructor for the display driver with desired configurations.
-  //
-  // @param bus_mode     4-bit or 8-bit data transfer bus mode.
-  // @param display_mode Number of lines used for displaying characters.
-  // @param font_style   Character font style.
-  // @param position     Display dimensions.
-  lcd(CursorPosition_t position)
-      : _cols(position.position),
-        _rows(position.line_number)
-  {
-  }
-  virtual Status Initialize()                                       = 0;
+  virtual Status Initialize() = 0;
+  // Handles the Write Operation based on the Bus Mode
   virtual void WriteByte(RegisterOperation operation, uint8_t byte) = 0;
+  // Handles the Write Operation for communicating with the display
+  virtual void Write(RegisterOperation operation, uint8_t byte) = 0;
 
   Status InitializeScreen()
   {
     // Final function set bus mode, display mode and font style
-    WriteCommand(uint8_t(Command::kFunctionSet) | _displaysetting);
+    WriteByte(RegisterOperation::kCommand,
+              uint8_t(Command::kFunctionSet) | _displaysetting);
 
     SetDisplayOn();
     ClearDisplay();
-    //ReturnHome();
+    ReturnHome();
     return Status::kSuccess;
   }
 
@@ -121,41 +119,44 @@ class lcd
   // to the device.
   void ClearDisplay()
   {
-    WriteCommand(util::Value(Command::kClearDisplay));
+    WriteByte(RegisterOperation::kCommand, util::Value(Command::kClearDisplay));
     Delay(2ms);  // Clear display operation requires 2ms
   }
 
   // @param on Toggles the display on if true.
   void SetDisplayOn(bool on = true)
   {
-    WriteCommand(on ? util::Value(Command::kDisplayControl) |
-                          util::Value(Command::kDisplayOn)
-                    : util::Value(Command::kDisplayControl) |
-                          util::Value(Command::kDisplayOff));
+    WriteByte(RegisterOperation::kCommand,
+              on ? util::Value(Command::kDisplayControl) |
+                       util::Value(Command::kDisplayOn)
+                 : util::Value(Command::kDisplayControl) |
+                       util::Value(Command::kDisplayOff));
   }
 
   // @param on Toggles the cursor on if true.
   void SetCursorOn(bool on = true)
   {
-    WriteCommand(on ? util::Value(Command::kDisplayControl) |
-                          util::Value(Command::kCursorOn)
-                    : util::Value(Command::kDisplayControl) |
-                          util::Value(Command::kCursorOff));
+    WriteByte(RegisterOperation::kCommand,
+              on ? util::Value(Command::kDisplayControl) |
+                       util::Value(Command::kCursorOn)
+                 : util::Value(Command::kDisplayControl) |
+                       util::Value(Command::kCursorOff));
   }
 
   // @param on Toggles the cursor blink on if true.
   void SetBlinkOn(bool on = true)
   {
-    WriteCommand(on ? util::Value(Command::kDisplayControl) |
-                          util::Value(Command::kBlinkOn)
-                    : util::Value(Command::kDisplayControl) |
-                          util::Value(Command::kBlinkOff));
+    WriteByte(RegisterOperation::kCommand,
+              on ? util::Value(Command::kDisplayControl) |
+                       util::Value(Command::kBlinkOn)
+                 : util::Value(Command::kDisplayControl) |
+                       util::Value(Command::kBlinkOff));
   }
 
   // Returns the display to the beginning position.
   void ReturnHome()
   {
-    WriteCommand(util::Value(Command::kReturnHome));
+    WriteByte(RegisterOperation::kCommand, util::Value(Command::kReturnHome));
     Delay(2s);
   }
 
@@ -165,17 +166,19 @@ class lcd
   // @param pos  Character position to move cursor to.
   void SetCursorPosition(CursorPosition_t position)
   {
-    const uint8_t kMaxLineNumbers = _rows;
-    const uint8_t row_offsets[]   = {
-      0x00, 0x40, 0x14, 0x54
-    };  // according to data manual
+    // This driver supports 4 display lines
+    const uint8_t kMaxLineNumbers = 4;
+    // according to data manual
+    const uint8_t row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
     if (position.line_number > kMaxLineNumbers)
     {
       position.line_number = uint8_t(kMaxLineNumbers - 1);
     }
-    WriteCommand(
+
+    WriteByte(
+        RegisterOperation::kCommand,
         util::Value(Command::kSetDDRAMAddr) |
-        uint8_t(position.position + row_offsets[position.line_number]));
+            uint8_t(position.position + row_offsets[position.line_number]));
   }
 
   // Displays a desired text string on the display.
@@ -185,9 +188,10 @@ class lcd
   void DisplayText(const char * text,
                    CursorPosition_t position = kDefaultCursorPosition)
   {
-    const uint8_t kMaxDisplayWidth = _cols;
-    const uint8_t kStartOffset     = position.position;
-    uint8_t termination_index      = uint8_t(strlen(text));
+    // This driver supports a character position width of 20
+    constexpr uint8_t kMaxDisplayWidth = 20;
+    const uint8_t kStartOffset         = position.position;
+    uint8_t termination_index          = uint8_t(strlen(text));
     // calculate the termination_index to stop writing to the display
     // if the string length of text exceeds the display's width
     if (termination_index > kMaxDisplayWidth)
@@ -202,33 +206,11 @@ class lcd
     SetCursorPosition(position);
     for (uint8_t i = 0; i < termination_index; i++)
     {
-      WriteData(text[i]);
+      WriteByte(RegisterOperation::kData, text[i]);
     }
   }
 
- private:
-  // Writes a command byte to the current cursor address position.
-  //
-  // @param command Byte to send to device.
-  void WriteCommand(uint8_t command)
-  {
-    WriteByte(RegisterOperation::kCommand, command);
-  }
-
-  // Writes a data byte to the current cursor address position.
-  //
-  // @param data Byte to send to device.
-  void WriteData(uint8_t data)
-  {
-    WriteByte(RegisterOperation::kData, data);
-  }
-
  protected:
- /* const BusMode kBusMode;
-  const DisplayMode kDisplayMode;
-  const FontStyle kFontStyle;*/
   uint8_t _displaysetting;
-  const uint8_t _cols;
-  const uint8_t _rows;
 };
 }  // namespace sjsu

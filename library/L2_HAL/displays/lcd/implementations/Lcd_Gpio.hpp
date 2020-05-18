@@ -1,3 +1,5 @@
+// LCD Gpio Interface adapted from David Huang's Parallel LCD driver
+
 #pragma once
 
 #include "L1_Peripheral/gpio.hpp"
@@ -33,10 +35,8 @@ class LCD_GPIO : public lcd
   LCD_GPIO(BusMode bus_mode,
            DisplayMode display_mode,
            FontStyle font_style,
-           CursorPosition_t position,
            const ControlPins_t & pins)
-      : lcd(position),
-        kBusMode(bus_mode),
+      : kBusMode(bus_mode),
         kDisplayMode(display_mode),
         kFontStyle(font_style),
         kControlPins(pins)
@@ -67,12 +67,12 @@ class LCD_GPIO : public lcd
     InitializeScreen();
     return Status::kSuccess;
   }
-  void Write(RegisterOperation operation, uint8_t byte)
+  void Write(RegisterOperation operation, uint8_t byte) override
   {
     kControlPins.e.Set(sjsu::Gpio::State::kHigh);
     kControlPins.rs.Set(sjsu::Gpio::State(operation));
     kControlPins.rw.Set(sjsu::Gpio::State::kLow);
-    // set byte on 8-bit data bus
+    // set byte depending on data bus
     if (kBusMode == BusMode::kEightBitMode)
     {
       kControlPins.d7.Set(sjsu::Gpio::State((byte >> 7) & 0x01));
@@ -87,13 +87,9 @@ class LCD_GPIO : public lcd
     else
     {
       kControlPins.d7.Set(sjsu::Gpio::State((byte >> 3) & 0x01));
-      printf("Bit 7: %i\n", ((byte >> 3) & 0x01));
       kControlPins.d6.Set(sjsu::Gpio::State((byte >> 2) & 0x01));
-      printf("Bit 6: %i\n", ((byte >> 2) & 0x01));
       kControlPins.d5.Set(sjsu::Gpio::State((byte >> 1) & 0x01));
-      printf("Bit 5: %i\n", ((byte >> 1) & 0x01));
       kControlPins.d4.Set(sjsu::Gpio::State((byte >> 0) & 0x01));
-      printf("Bit 4: %i\n", ((byte >> 0) & 0x01));      
     }
     Delay(2ms);
     // Toggle chip enable to trigger write on falling edge
@@ -103,15 +99,10 @@ class LCD_GPIO : public lcd
 
   void WriteByte(RegisterOperation operation, uint8_t byte) override
   {
-    // uint8_t highnib, lownib = 0;
     switch (kBusMode)
     {
       case BusMode::kFourBitMode:
-        // highnib = (byte & 0xf0);
-        // lownib  = uint8_t((byte << 4) & 0xf0);
-        printf("Highnib: %i\n", ((byte >> 4) & 0x0F));
         Write(operation, (byte >> 4) & 0x0F);
-        printf("Lownib: %i\n", ((byte >> 0) & 0x0F));
         Write(operation, (byte >> 0) & 0x0F);
         break;
       case BusMode::kEightBitMode: Write(operation, byte); break;

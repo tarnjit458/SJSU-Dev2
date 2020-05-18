@@ -35,11 +35,9 @@ class LCD_I2C : public lcd
   // @param address      The address of the display for communication.
   LCD_I2C(DisplayMode display_mode,
           FontStyle font_style,
-          CursorPosition_t position,
           I2c & i2c,
           uint8_t address)
-      : lcd(position),
-        i2c_(i2c),
+      : i2c_(i2c),
         addr_(address),
         kDisplayMode(display_mode),
         kFontStyle(font_style)
@@ -72,7 +70,7 @@ class LCD_I2C : public lcd
     return init_status;
   }
   // Handles the write operation
-  void Write(RegisterOperation operation, uint8_t byte)
+  void Write(RegisterOperation operation, uint8_t byte) override
   {
     ControlPins_t pin;
     pin.byte = byte;
@@ -99,14 +97,8 @@ class LCD_I2C : public lcd
   // Handles the write operation for the 4-bit operation
   void WriteByte(RegisterOperation operation, uint8_t byte) override
   {
-    uint8_t highnib, lownib = 0;
-
-    highnib = (byte & 0xf0);
-    lownib  = uint8_t((byte << 4) & 0xf0);
-    // printf("Command: %i\n", highnib);
-    Write(operation, highnib);
-    // printf("Command: %i\n", lownib);
-    Write(operation, lownib);
+    Write(operation, static_cast<uint8_t>((byte << 0) & 0xf0));
+    Write(operation, static_cast<uint8_t>((byte << 4) & 0xf0));
   }
 
   // Pulses the enable high then low for writing

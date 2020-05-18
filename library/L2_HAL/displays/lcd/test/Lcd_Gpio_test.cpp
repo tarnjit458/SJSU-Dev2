@@ -81,7 +81,7 @@ TEST_CASE("Testing Gpio LCD Driver", "[lcd_gpio]")
         .Exactly(1);
   }
 
-  SECTION("Write Byte")
+  SECTION("Write")
   {
     constexpr uint8_t kCommandByte = 0b1010'1010;
     constexpr uint8_t kDataByte    = static_cast<uint8_t>(~kCommandByte);
@@ -93,7 +93,7 @@ TEST_CASE("Testing Gpio LCD Driver", "[lcd_gpio]")
                             pins);
     lcd.Initialize();
 
-    lcd.WriteByte(lcd::RegisterOperation::kCommand, kCommandByte);
+    lcd.Write(lcd::RegisterOperation::kCommand, kCommandByte);
     // pins RS, RW, and D7-D0 should all be set before the Chip Enable
     // falling edge write trigger.
     Verify(Method(mock_e, Set),
@@ -112,7 +112,7 @@ TEST_CASE("Testing Gpio LCD Driver", "[lcd_gpio]")
            Method(mock_d0, Set).Using(Gpio::State((kCommandByte >> 0) & 0x01)),
            Method(mock_e, Set).Using(Gpio::State::kLow));
 
-    lcd.WriteByte(lcd::RegisterOperation::kData, kDataByte);
+    lcd.Write(lcd::RegisterOperation::kData, kDataByte);
     Verify(Method(mock_e, Set),
            Method(mock_e, Set).Using(Gpio::State::kLow),
            Method(mock_e, Set));
@@ -129,6 +129,66 @@ TEST_CASE("Testing Gpio LCD Driver", "[lcd_gpio]")
         Method(mock_d0, Set).Using(Gpio::State((kDataByte >> 0) & 0x01)),
         Method(mock_e, Set).Using(Gpio::State::kLow));
   }
-}
 
+  SECTION("Write Byte")
+  {
+    constexpr uint8_t kCommandByte = 0b1010'1010;
+    constexpr uint8_t kDataByte    = static_cast<uint8_t>(~kCommandByte);
+
+    LCD_GPIO lcd_8bit =
+        LCD_GPIO(lcd::BusMode::kEightBitMode,
+                 lcd::DisplayMode::kTwoLine,
+                 lcd::FontStyle::kFont5x8,
+                 lcd::CursorPosition_t{ kPosition, kLineNumber },
+                 pins);
+    lcd_8bit.Initialize();
+
+    lcd_8bit.WriteByte(lcd::RegisterOperation::kCommand, kCommandByte);
+    // pins RS, RW, and D7-D0 should all be set before the Chip Enable
+    // falling edge write trigger.
+    Verify(Method(mock_e, Set),
+           Method(mock_e, Set).Using(Gpio::State::kLow),
+           Method(mock_e, Set));
+    Verify(Method(mock_rs, Set)
+               .Using(Gpio::State(lcd::RegisterOperation::kCommand)),
+           Method(mock_rw, Set).Using(Gpio::State::kLow),
+           Method(mock_d7, Set).Using(Gpio::State((kCommandByte >> 7) & 0x01)),
+           Method(mock_d6, Set).Using(Gpio::State((kCommandByte >> 6) & 0x01)),
+           Method(mock_d5, Set).Using(Gpio::State((kCommandByte >> 5) & 0x01)),
+           Method(mock_d4, Set).Using(Gpio::State((kCommandByte >> 4) & 0x01)),
+           Method(mock_d3, Set).Using(Gpio::State((kCommandByte >> 3) & 0x01)),
+           Method(mock_d2, Set).Using(Gpio::State((kCommandByte >> 2) & 0x01)),
+           Method(mock_d1, Set).Using(Gpio::State((kCommandByte >> 1) & 0x01)),
+           Method(mock_d0, Set).Using(Gpio::State((kCommandByte >> 0) & 0x01)),
+           Method(mock_e, Set).Using(Gpio::State::kLow));
+
+    LCD_GPIO lcd_4bit =
+        LCD_GPIO(lcd::BusMode::kFourBitMode,
+                 lcd::DisplayMode::kTwoLine,
+                 lcd::FontStyle::kFont5x8,
+                 lcd::CursorPosition_t{ kPosition, kLineNumber },
+                 pins);
+    lcd_4bit.Initialize();
+
+    lcd_4bit.WriteByte(lcd::RegisterOperation::kData, kDataByte);
+    Verify(Method(mock_e, Set),
+           Method(mock_e, Set).Using(Gpio::State::kLow),
+           Method(mock_e, Set));
+    Verify(
+        Method(mock_rs, Set).Using(Gpio::State(lcd::RegisterOperation::kData)),
+        Method(mock_rw, Set).Using(Gpio::State::kLow),
+        Method(mock_d7, Set).Using(Gpio::State((kDataByte >> 7) & 0x01)),
+        Method(mock_d6, Set).Using(Gpio::State((kDataByte >> 6) & 0x01)),
+        Method(mock_d5, Set).Using(Gpio::State((kDataByte >> 5) & 0x01)),
+        Method(mock_d4, Set).Using(Gpio::State((kDataByte >> 4) & 0x01)),
+        Method(mock_e, Set).Using(Gpio::State::kLow),
+        Method(mock_rs, Set).Using(Gpio::State(lcd::RegisterOperation::kData)),
+        Method(mock_rw, Set).Using(Gpio::State::kLow),
+        Method(mock_d7, Set).Using(Gpio::State((kDataByte >> 3) & 0x01)),
+        Method(mock_d6, Set).Using(Gpio::State((kDataByte >> 2) & 0x01)),
+        Method(mock_d5, Set).Using(Gpio::State((kDataByte >> 1) & 0x01)),
+        Method(mock_d4, Set).Using(Gpio::State((kDataByte >> 0) & 0x01)),
+        Method(mock_e, Set).Using(Gpio::State::kLow));
+  }
+}
 }  // namespace sjsu
